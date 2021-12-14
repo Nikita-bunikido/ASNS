@@ -1,3 +1,5 @@
+/* ASNS */
+
 #include "header.h"
 #include "layer.h"
 #include "pseudo-graphics.h"
@@ -8,6 +10,7 @@ enum modes {
 };
 
 unsigned char **screen = NULL;
+/* screen size, working area size */
 unsigned int SCREEN_W, SCREEN_H, WA_W, WA_H;
 
 unsigned int current_layer = 0U;
@@ -18,10 +21,15 @@ typedef struct {
     unsigned y;
 } point;
 
+//work modes flags
 bool work_modes[2] = {false};
 
+//global program cursor
 point cursor = {0, 0};
 
+/* print_strings(int, ...) - prints strings.
+num - number of strings
+arguments - char*[] */
 void print_strings (int num, ...){
     va_list p;
     va_start(p, num);
@@ -31,14 +39,20 @@ void print_strings (int num, ...){
     va_end(p);
 }
 
+/* in_screen(point) retutn value 'true' if point
+is in screen field, other ways - 'false' */
 bool in_screen (point p){
     return p.x < SCREEN_W && p.y < SCREEN_H;
 }
 
+/* in_working_area(point) return value 'true' if point
+is in working area, other ways - 'false' */
 bool in_working_area (point p){
     return p.x < WA_W-1 && p.y < WA_H-1 && p.x > 0 && p.y > 0;
 }
 
+/* print_string(const char*, point) - prints string 'string' in
+'begin' position on screen array */
 void print_string (const char* string, point begin){
     const char* p = string;
     int offset = 0;
@@ -50,6 +64,8 @@ void print_string (const char* string, point begin){
     }
 }
 
+/* Init_screen(int*, char *(*[])) - mallocing screen array, checks arguments,
+set flags to working modes, draws base ui on screen*/
 void Init_screen (int *argc, char *(*argv[])){
 
     
@@ -121,6 +137,8 @@ void Init_screen (int *argc, char *(*argv[])){
     print_string ("asns v0.1", (point){WA_W + 1, 0U});
 }
 
+/* Draw_working_area(int, struct layer*[]) - draws all layers on screen
+array. 'num_of_layers' - number of layers will draw */
 void Draw_working_area (int num_of_layers, struct layer* layers[]){
     for (int i = 1; i < WA_H-1; i++)
         for (int j = 1; j < WA_W-1; j++)
@@ -137,6 +155,7 @@ void Draw_working_area (int num_of_layers, struct layer* layers[]){
     }
 }
 
+/* Update_side_bar() - updates sidebar strings and states */
 void Update_side_bar (){
     print_string ("test.txt* - ASCII text", (point){WA_W + 1, 1U});
     
@@ -158,6 +177,7 @@ void Update_side_bar (){
     print_string((char[]){BRUSH, '\0'}, (point){WA_W + 13, 4U});
 }
 
+/* Update_screen(int, struct layer*[]) - updates sidebar and working area */
 void Update_screen (int layers_num, struct layer* layers[]){
     Draw_working_area(layers_num, layers);
     Update_side_bar();
@@ -167,6 +187,7 @@ void Update_screen (int layers_num, struct layer* layers[]){
 
 }
 
+/* Update_layers(int, struct layer*[]) - updates all layers with active instruments */
 void Update_layers (int layers_num, struct layer* layers[]){
     
     if (work_modes[M_DRAW])
@@ -175,12 +196,14 @@ void Update_layers (int layers_num, struct layer* layers[]){
         layers[current_layer]->data[cursor.y][cursor.x] = C_EMPTY;
 }
 
+/* Display_screen() - outputs screen array into real screen */
 void Display_screen (){
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), (COORD){0,0});
     for (int i = 0; i < SCREEN_H; i++)
         print_strings(2, screen[i], "\n");
 }
 
+/* move_cursor(point*, int) - moves cursor, with user input 'input'*/
 void move_cursor (point *cur, int input){
     switch (input){
         case '\x48': /* up */
@@ -202,6 +225,8 @@ void move_cursor (point *cur, int input){
     }
 }
 
+/* Push_layer(struct layer, int*, struct layer**) - pushes layer 'layer'
+to the 'num' pos into 'stack', and increments 'num'*/
 void push_layer (struct layer* layer, int* num, struct layer** stack){
     stack = (struct layer**)realloc(stack, *num * (sizeof(struct layer*)));
     stack[*num++] = layer;

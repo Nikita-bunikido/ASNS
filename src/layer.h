@@ -1,3 +1,6 @@
+/* layer struct, and functions
+to work with layers         */
+
 #include "header.h"
 
 struct layer {
@@ -6,6 +9,8 @@ struct layer {
     unsigned char** data;
 };
 
+/* new_layer (unsigned, unsigned) - creates new empty layer,
+with size 'size_x', 'size_y' and returns it's adress */
 struct layer* new_layer (unsigned size_x, unsigned size_y){
     struct layer* new_layer = (struct layer*)malloc(sizeof(struct layer));
 
@@ -21,6 +26,8 @@ struct layer* new_layer (unsigned size_x, unsigned size_y){
     return new_layer;
 }
 
+/* destroy_layer (struct layer*) - destroys layer 'lr', and
+returns it's adress */
 struct layer* destroy_layer (struct layer* lr){
     for (int i = 0; i < (*lr).sy; i++)
         free((*lr).data[i]);

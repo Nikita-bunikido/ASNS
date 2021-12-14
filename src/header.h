@@ -1,3 +1,5 @@
+/* asns - global header */
+
 #if !defined (ASNS_HEADER)
 
 #define ASNS_HEADER
@@ -11,7 +13,7 @@
 #include <windows.h>
 #include <conio.h>
 
-#define C_SPACE     (unsigned char)32
-#define C_EMPTY     (unsigned char)0
+#define C_SPACE     (unsigned char)32 /* empty char */
+#define C_EMPTY     (unsigned char)0  /* layer trancperent char */
 
 #endif
