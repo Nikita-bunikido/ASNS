@@ -2,19 +2,23 @@
 #include "layer.h"
 #include "pseudo-graphics.h"
 
+enum modes {
+    M_DRAW,
+    M_ERASE
+};
+
 unsigned char **screen = NULL;
 unsigned int SCREEN_W, SCREEN_H, WA_W, WA_H;
 
 unsigned int current_layer = 0U;
+unsigned char BRUSH = '#';
 
 typedef struct {
     unsigned x;
     unsigned y;
 } point;
 
-struct {
-    bool drawing;
-} work_modes = {false};
+bool work_modes[2] = {false};
 
 point cursor = {0, 0};
 
@@ -48,7 +52,10 @@ void print_string (const char* string, point begin){
 
 void Init_screen (int *argc, char *(*argv[])){
 
-    bool default_size = !strcmp((*argv)[1], "-default");
+    
+    bool default_size;
+    if (*argc > 1)
+        default_size = !strcmp((*argv)[1], "-default");
 
     if (*argc < 3 && !default_size){
         printf("usage: asns <w.a. width> <w.a. height>\n");
@@ -112,7 +119,6 @@ void Init_screen (int *argc, char *(*argv[])){
     void print_string (const char* string, point begin);
 
     print_string ("asns v0.1", (point){WA_W + 1, 0U});
-    print_string ("test.txt* - ASCII text", (point){WA_W + 1, 1U});
 }
 
 void Draw_working_area (int num_of_layers, struct layer* layers[]){
@@ -131,11 +137,42 @@ void Draw_working_area (int num_of_layers, struct layer* layers[]){
     }
 }
 
+void Update_side_bar (){
+    print_string ("test.txt* - ASCII text", (point){WA_W + 1, 1U});
+    
+    /* coordinates */
+    print_string ("[X  Y  ]", (point){WA_W + 1, 3U});
+    char x[32], y[32];
+    itoa(cursor.x, x, 10);
+    itoa(cursor.y, y, 10);
+    print_string (x, (point){WA_W + 3, 3U});
+    print_string (y, (point){WA_W + 6, 3U});
+
+    /* modes */
+    for (int i = 0; i < 2; i++){
+        print_string((char*[]){"[ ] - draw \' \'", "[ ] - erase"}[i], (point){WA_W + 1, 4U + i});
+        print_string (work_modes[i] ? "^" : " ", (point){WA_W + 2, 4U + i});
+    }
+
+    /* modes + */
+    print_string((char[]){BRUSH, '\0'}, (point){WA_W + 13, 4U});
+}
+
 void Update_screen (int layers_num, struct layer* layers[]){
     Draw_working_area(layers_num, layers);
+    Update_side_bar();
 
     /* cursor drawing */
     screen[cursor.y+1][cursor.x+1] = 219;
+
+}
+
+void Update_layers (int layers_num, struct layer* layers[]){
+    
+    if (work_modes[M_DRAW])
+        layers[current_layer]->data[cursor.y][cursor.x] = BRUSH;
+    if (work_modes[M_ERASE])
+        layers[current_layer]->data[cursor.y][cursor.x] = C_EMPTY;
 }
 
 void Display_screen (){
@@ -165,28 +202,103 @@ void move_cursor (point *cur, int input){
     }
 }
 
+void push_layer (struct layer* layer, int* num, struct layer** stack){
+    stack = (struct layer**)realloc(stack, *num * (sizeof(struct layer*)));
+    stack[*num++] = layer;
+}
+
 int main (int argc, char* argv[]){
     system("cls");
     Init_screen(&argc, &argv);
+    memset(work_modes, false, sizeof(work_modes));
 
-    struct layer* main_layer = new_layer(WA_W-2, WA_H-2);
-    
+
+    int layers_num = 1;
+    struct layer** layers = malloc(sizeof(struct layer*));
+    layers[0] = new_layer(WA_W-2, WA_H-2);
+
     char user_char = '\0';
 
     do {
-        Update_screen(1, (struct layer*[]){main_layer});
+        Update_layers(1, layers);
+        Update_screen(1, layers);
         Display_screen();
         
         user_char = getch();
 
-        if (strchr("\x48\x50\x4B\x4D", user_char) != NULL)
+        if (strchr("\x48\x50\x4B\x4D", user_char) != NULL){
             move_cursor(&cursor, user_char);
+            continue;
+        }
 
+        unsigned char tmp;
+
+        switch (user_char){
+        case 'd': /* drawing mode switch */
+            work_modes[M_DRAW] = !work_modes[M_DRAW];
+            if (work_modes[M_ERASE] && work_modes[M_DRAW])
+                work_modes[M_ERASE] = false;
+            break;
+        case 'e': /* erase mode switch */
+            work_modes[M_ERASE] = !work_modes[M_ERASE];
+            if (work_modes[M_ERASE] && work_modes[M_DRAW])
+                work_modes[M_DRAW] = false;
+            break;
+        case 'b': /* brush setting */
+            fprintf(stdout, "new brush > ");
+            scanf("\n%c", &tmp);
+
+            BRUSH = tmp;
+            system("cls");
+            break;
+        case 'a': /* file saving */ {
+            char path[255U], ctmp[64];
+            fprintf(stdout, "Path to save > ");
+            scanf("%s", ctmp);
+
+            if (!strcmp(ctmp, "standart"))
+                strcpy(path, "saved\\");
+            else
+                strcpy(path, ctmp);
+
+            fprintf(stdout, "File name > ");
+            scanf("%s", ctmp);
+            strcat(path, ctmp);
+
+            fprintf(stdout, "File format:\na - .asns (ASNS STANDART FORMAT)\nt - .txt (ASCII TEXT)\ne - .tex (TEXTURE)\ng - .texg (ANIMATED TEXTURE)\no - other format.\n> ");
+            scanf("\n%c", &tmp);
+
+            switch (tmp) {
+            case 'a':
+                strcat(path, ".asns");
+                break;
+            case 't':
+                strcat(path, ".txt");
+                break;
+            case 'e':
+                strcat(path, ".tex");
+                break;
+            case 'g':
+                strcat(path, ".texg");
+                break;
+            case 'o':
+                fprintf(stdout, "Your format > ");
+                scanf("%s", ctmp);
+
+                strcat(path, ctmp);
+            }
+
+            fprintf(stdout, "Saving to \'%s\'.\n", path);
+            Sleep(1500);
+            system(" cls" + 1);
+        } break;
+        }
         
     } while (user_char != 'q');
 
     /* destroying layers */
-    main_layer = (destroy_layer (main_layer), NULL);
+    for (int i = 0; i < layers_num; i++)
+    layers[i] = (destroy_layer (layers[i]), NULL);
 
     /* destroying screen */
     for (int i = 0; i < SCREEN_H; i++)
