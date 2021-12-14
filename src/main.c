@@ -68,7 +68,6 @@ void print_string (const char* string, point begin){
 set flags to working modes, draws base ui on screen*/
 void Init_screen (int *argc, char *(*argv[])){
 
-    
     bool default_size;
     if (*argc > 1)
         default_size = !strcmp((*argv)[1], "-default");
@@ -145,7 +144,8 @@ void Draw_working_area (int num_of_layers, struct layer* layers[]){
             screen[i][j] = C_SPACE;
     
     for (int k = 0; k < num_of_layers; k++){
-
+        if (layers[k]->visible != true)
+            continue;
         for (int i = 1; i < layers[k]->sy+1; i++)
             for (int j = 1; j < layers[k]->sx+1; j++){
                 if (in_working_area ((point){j, i}) && layers[k]->data[i-1][j-1] != C_EMPTY){
@@ -190,9 +190,9 @@ void Update_screen (int layers_num, struct layer* layers[]){
 /* Update_layers(int, struct layer*[]) - updates all layers with active instruments */
 void Update_layers (int layers_num, struct layer* layers[]){
     
-    if (work_modes[M_DRAW])
+    if (work_modes[M_DRAW] && layers[current_layer]->visible)
         layers[current_layer]->data[cursor.y][cursor.x] = BRUSH;
-    if (work_modes[M_ERASE])
+    if (work_modes[M_ERASE] && layers[current_layer]->visible)
         layers[current_layer]->data[cursor.y][cursor.x] = C_EMPTY;
 }
 
@@ -232,6 +232,84 @@ void push_layer (struct layer* layer, int* num, struct layer** stack){
     stack[*num++] = layer;
 }
 
+/* hash_summ(int, struct layer*[]) - returns
+value of hash summ of layers. 'num' - number of layers */
+unsigned long long hash_summ (int num, struct layer* layers[]){
+    unsigned long long result = 0x0ULL;
+
+    result += (num * 9173ULL) - 10283ULL;
+    for (int k = 0; k < num; k++){
+        result += layers[k]->visible * 5;
+        for (int i = 0; i < layers[k]->sy; i++)
+            for(int j = 0; j < layers[k]->sx; j++)
+                result += layers[k]->data[i][j] * 708ULL;
+    }
+
+    return result % 1000000000ULL;
+}
+
+/* Save_file (int, struct layer*[], const char, unsigned char) - saves
+file to 'save_path' with 'format' format option. */
+void Save_file (int num, struct layer* layers[], const char* save_path, unsigned char format){
+    if (num <= 0)
+        return;  //no layers
+
+    FILE* save;
+    switch (format){
+    case 'a': /* asns format */
+        save = fopen(save_path, "wb");
+
+        fwrite(&num, sizeof(num), 1, save);
+
+        for (int k = 0; k < num; k++){
+            fwrite(&layers[k]->visible, sizeof(bool),1, save);
+            fwrite(&layers[k]->sx, sizeof(unsigned), 1, save);
+            fwrite(&layers[k]->sy, sizeof(unsigned), 1, save);
+        
+        for (int i = 0; i < layers[k]->sy; i++)
+            for (int j = 0; j < layers[k]->sx; j++){
+                fwrite(&layers[k]->data[i][j], sizeof(unsigned char), 1, save);
+            }
+        }
+        fclose(save);
+        break;
+    case 't': /* ascii text format */
+        save = fopen(save_path, "w");
+
+        _standart_ascii_save:
+        for (int i = 0; i < layers[0]->sy; i++){
+            for (int j = 0; j < layers[0]->sx; j++){
+                int tmp = num;
+                unsigned char result = layers[tmp-1]->data[i][j];
+
+                while (tmp > 0 && (layers[tmp-1]->data[i][j] == C_EMPTY || layers[tmp-1]->visible == false)){
+                    result = layers[tmp-1]->data[i][j];
+                    tmp--;
+                }
+                if (result == C_EMPTY)
+                    result = C_SPACE;
+                fprintf(save, "%c", result);
+            }
+            fprintf(save, "\n");
+        }
+        fclose(save);
+        break;
+    case 'e': /* texture format */
+        save = fopen(save_path, "w");
+        fprintf(save, "0x%llx: %u %u\n", hash_summ (num, layers), layers[0]->sy, layers[0]->sx);
+
+        goto _standart_ascii_save;
+
+        break;
+    case 'g': /* animated texture format */
+        fprintf(stdout, "animated texture format (.texg) isn't avaiable in this asns version.\nSave process terminated.\n");
+        break;
+    case 'o': /* user format */
+        goto _standart_ascii_save;
+        break;
+    }
+}
+
 int main (int argc, char* argv[]){
     system("cls");
     Init_screen(&argc, &argv);
@@ -245,8 +323,8 @@ int main (int argc, char* argv[]){
     char user_char = '\0';
 
     do {
-        Update_layers(1, layers);
-        Update_screen(1, layers);
+        Update_layers(layers_num, layers);
+        Update_screen(layers_num, layers);
         Display_screen();
         
         user_char = getch();
@@ -257,6 +335,7 @@ int main (int argc, char* argv[]){
         }
 
         unsigned char tmp;
+        
 
         switch (user_char){
         case 'd': /* drawing mode switch */
@@ -270,18 +349,29 @@ int main (int argc, char* argv[]){
                 work_modes[M_DRAW] = false;
             break;
         case 'b': /* brush setting */
-            fprintf(stdout, "new brush > ");
-            scanf("\n%c", &tmp);
+            char ctmp[64];
+            fprintf(stdout, "new brush\n\'-ascii\' to choose by code\n> ");
+            scanf("\n%s", ctmp);
 
-            BRUSH = tmp;
+            if (!strcmp(ctmp, "-ascii")){
+                unsigned code;
+                
+                fprintf(stdout, "ascii code > ");
+                scanf("\n%u", &code);
+                BRUSH = code;
+                system("cls");
+                break;
+            }
+
+            BRUSH = *ctmp;
             system("cls");
             break;
         case 'a': /* file saving */ {
             char path[255U], ctmp[64];
-            fprintf(stdout, "Path to save > ");
+            fprintf(stdout, "Path to save\n \'-standart\' to save into standart directory\n> ");
             scanf("%s", ctmp);
 
-            if (!strcmp(ctmp, "standart"))
+            if (!strcmp(ctmp, "-standart"))
                 strcpy(path, "saved\\");
             else
                 strcpy(path, ctmp);
@@ -313,9 +403,12 @@ int main (int argc, char* argv[]){
                 strcat(path, ctmp);
             }
 
-            fprintf(stdout, "Saving to \'%s\'.\n", path);
-            Sleep(1500);
-            system(" cls" + 1);
+            Save_file(layers_num, layers, path, tmp);
+            fprintf(stdout, "Saved to \'%s\'.\n", path);
+            fprintf(stdout, "Press [enter] to continue...");
+            getchar();
+            getchar();
+            system("cls");
         } break;
         }
         

@@ -7,6 +7,7 @@ struct layer {
     unsigned sx;
     unsigned sy;
     unsigned char** data;
+    bool visible;
 };
 
 /* new_layer (unsigned, unsigned) - creates new empty layer,
@@ -14,8 +15,9 @@ with size 'size_x', 'size_y' and returns it's adress */
 struct layer* new_layer (unsigned size_x, unsigned size_y){
     struct layer* new_layer = (struct layer*)malloc(sizeof(struct layer));
 
-    (*new_layer).sx = size_x;
-    (*new_layer).sy = size_y;
+    (*new_layer).sx      = size_x;
+    (*new_layer).sy      = size_y;
+    (*new_layer).visible = true;
 
     (*new_layer).data = (unsigned char**)malloc(size_y * sizeof(unsigned char*));
     for (int i = 0; i < (*new_layer).sy; i++){
