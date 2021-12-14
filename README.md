@@ -16,7 +16,7 @@ Use mingw32-make to compile it:
     cd ASNS\src\
     mingw32-make
 
-##### Step 3. Use it
+##### Step 3. Getting started
 
 For this time you can use it like this, because program is not finished yet:
 
@@ -24,3 +24,19 @@ For this time you can use it like this, because program is not finished yet:
 
 w.a. - working area.
 You can setup your working area using this command.
+
+Use  ```-default``` flag, to set default sizes of working area.
+
+#### Management
+
+| Key | Action |
+|:---:|:------:|
+| *up arrow* | move cursor up |
+| *down arrow* | move cursor down |
+| *left arrow* | move cursor left |
+| *right arrow*| move cursor right |
+| **d**          | start/end drawing mode |
+| **b**          | choose new brush |
+| **e**          | start/end eraser mode |
+| **a**          | save file             |
+| **q**          | safe exit without save |
