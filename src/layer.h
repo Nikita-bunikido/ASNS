@@ -38,3 +38,10 @@ struct layer* destroy_layer (struct layer* lr){
     free(lr);
     return lr;
 }
+
+/* Push_layer(struct layer, int*, struct layer**) - pushes layer 'layer'
+to the 'num' pos into 'stack', and increments 'num'*/
+void push_layer (struct layer* layer, int* num, struct layer** stack){
+    stack = (struct layer**)realloc(stack, *num * (sizeof(struct layer*)));
+    stack[*num++] = layer;
+}

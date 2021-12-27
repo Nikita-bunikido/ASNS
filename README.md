@@ -18,9 +18,11 @@ Use mingw32-make to compile it:
 
 ##### Step 3. Getting started
 
-For this time you can use it like this, because program is not finished yet:
+Program name - ```asns```.
 
-    asns <w.a. width> <w.a. height>
+| flags | influence |
+|:-----:|:---------:|
+| ```<file>``` | opens a file to work with
 
 w.a. - working area.
 You can setup your working area using this command.
