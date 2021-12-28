@@ -259,3 +259,96 @@ void Screen_setup(){
     print_string ("asns 0.1", (point){WA_W + 1, 0U});
     return;
 }
+
+#define NEW_HIST_STATE  '\n'
+
+FILE* history_setup (const char* path){
+    FILE* hist;
+    hist = fopen(path, "w");
+    return hist;
+}
+
+void history_write(FILE* hist, unsigned long long* steps, int num, struct layer* layers[]){
+    (*steps)++;
+    fprintf(hist, "%c", NEW_HIST_STATE);
+
+    fprintf(hist, "%d", num);
+    for (int k = 0; k < num; k++){
+
+        fprintf(hist, "|%c|%u|%u|", (char)(layers[k]->visible + '0'), layers[k]->sx, layers[k]->sy);
+        for (int i = 0; i < layers[k]->sy; i++)
+            for (int j = 0; j < layers[k]->sx; j++)
+                fprintf(hist, "%c", layers[k]->data[i][j] == C_EMPTY ? '\t' : layers[k]->data[i][j]);
+    }
+}
+
+void history_delete_step (FILE* hist, const char* path, unsigned long long step){
+    char* data = NULL;
+
+    fseek(hist, 0, SEEK_END);
+    data = (char*)malloc(ftell(hist) + 1);
+
+    char c;
+    size_t i = 0;
+    fseek(hist, 0, 0);
+    while ((c = fgetc(hist)) != EOF)
+        data[i++] = c;
+    data[i] = '\0';
+    
+    fclose(hist);
+    hist = fopen(path, "w");
+
+    i = 0;
+    bool deleted = false;
+    unsigned long long new_lines_count = 0;
+    while ((data[i] != '\0')){
+        fputc(data[i], hist);
+
+        if (data[i] == NEW_HIST_STATE)
+            new_lines_count++;
+        
+        if (new_lines_count == step && !deleted){
+            i++;
+            while (data[i-1] != NEW_HIST_STATE && data[i] != '\0')
+                i++;
+            deleted = true;
+        }
+        i++;
+    }
+    fclose(hist);
+    free(data);
+}
+
+void history_step_back(FILE* hist, const char* path, unsigned long long* steps, int* num, struct layer* layers[]){
+    (*steps)--;
+
+    fclose(hist);
+    hist = fopen(path, "r");
+
+    unsigned k = 0U;
+    while (!feof(hist)){
+        if(fgetc(hist) == NEW_HIST_STATE)
+            k++;
+        if (k == *steps)
+            break;
+    }
+
+    fscanf(hist, "%d", num);
+
+    for (int i = 0; i < *num; i++){
+        char vis;
+        fscanf(hist, "|%c|%u|%u|", &vis, &layers[i]->sx, &layers[i]->sy);
+        layers[i]->visible = (bool)(vis - '0');
+
+        for (int y = 0; y < layers[i]->sy; y++)
+            for (int x = 0; x < layers[i]->sx; x++){
+                char read_char;
+                fscanf(hist, "%c", &read_char);
+
+                layers[i]->data[y][x] = (read_char == '\t') ? C_EMPTY : read_char;
+            }
+    }
+
+    history_delete_step(hist, path, *(steps-1));
+    hist = fopen(path, "a");
+}

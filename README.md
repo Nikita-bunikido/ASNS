@@ -37,6 +37,7 @@ Use  ```-default``` flag, to set default sizes of working area.
 | *down arrow* | move cursor down |
 | *left arrow* | move cursor left |
 | *right arrow*| move cursor right |
+| **z**        | step back |
 | **d**          | start/end drawing mode |
 | **b**          | choose new brush |
 | **e**          | start/end eraser mode |

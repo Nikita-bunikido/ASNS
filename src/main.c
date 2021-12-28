@@ -56,6 +56,7 @@ void move_cursor (point *cur, int input){
 
 int main (int argc, char* argv[]){
     
+    FILE* hist = history_setup("sys\\.hist");
     bool can_parse = false;
     char* working_path = Init(&argc, &argv, &can_parse);
     memset(work_modes, false, sizeof(work_modes));
@@ -92,9 +93,16 @@ int main (int argc, char* argv[]){
 
     saved = true;
 
+    unsigned long long last_hash_summ = hash_summ(layers_num, layers), current_step = 0x0ULL;
+
     do {
         
         saved = (saved_hash_summ == hash_summ(layers_num, layers));
+
+        if (last_hash_summ != hash_summ(layers_num, layers)){
+            last_hash_summ = hash_summ(layers_num, layers);
+            history_write(hist, &current_step, layers_num, layers);
+        }
 
         Update_layers(layers_num, layers);
         Update_screen(working_path, layers_num, layers);
@@ -111,6 +119,19 @@ int main (int argc, char* argv[]){
         
 
         switch (user_char){
+        case 'z': /* step back */
+            if (current_step == 0){
+                fprintf(stdout, "no changes yet, nothing to restore.\n");
+                getchar();
+                system("cls");
+                break;
+            }
+            history_step_back(hist, "sys\\.hist", &current_step, &layers_num, layers);
+            last_hash_summ = hash_summ(layers_num, layers);
+            fprintf(stdout, "last change deleted.\n");
+            getchar();
+            system("cls");
+            break;
         case 'd': /* drawing mode switch */
             work_modes[M_DRAW] = !work_modes[M_DRAW];
             if (work_modes[M_ERASE] && work_modes[M_DRAW])
@@ -202,6 +223,9 @@ int main (int argc, char* argv[]){
         }
         
     } while (user_char != 'q');
+
+    /* closing history file */
+    fclose(hist);
 
     /* destroying layers */
     for (int i = 0; i < layers_num; i++)
