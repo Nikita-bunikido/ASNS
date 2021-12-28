@@ -20,3 +20,6 @@ unsigned char format = 't';
 //file saved
 bool saved = true;
 unsigned long long saved_hash_summ = 0ULL;
+
+//selected area moving
+bool area_moving = false;

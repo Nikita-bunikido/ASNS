@@ -69,7 +69,7 @@ void print_string (const char* string, point begin){
 
 /* Draw_working_area(int, struct layer*[]) - draws all layers on screen
 array. 'num_of_layers' - number of layers will draw */
-void Draw_working_area (int num_of_layers, struct layer* layers[]){
+void Draw_working_area (int num_of_layers, struct layer* layers[], struct layer* select_layer){
     for (int i = 1; i < WA_H-1; i++)
         for (int j = 1; j < WA_W-1; j++)
             screen[i][j] = C_SPACE;
@@ -81,6 +81,14 @@ void Draw_working_area (int num_of_layers, struct layer* layers[]){
             for (int j = 1; j < layers[k]->sx+1; j++){
                 if (in_working_area ((point){j, i}) && layers[k]->data[i-1][j-1] != C_EMPTY){
                     screen[i][j] = layers[k]->data[i-1][j-1];
+                }
+            }
+    }
+    if (work_modes[M_SELECTED]){
+        for (int i = 1; i < select_layer->sy+1; i++)
+            for (int  j = 1; j < select_layer->sx+1; j++){
+                if (in_working_area ((point){j, i}) && select_layer->data[i-1][j-1] != C_EMPTY){
+                    screen[i][j] = select_layer->data[i-1][j-1];
                 }
             }
     }
@@ -116,8 +124,8 @@ void Update_side_bar (const char* print_path){
     print_string (y, (point){WA_W + 6, 3U});
 
     /* modes */
-    for (int i = 0; i < 2; i++){
-        print_string((char*[]){"[ ] - draw \' \'", "[ ] - erase"}[i], (point){WA_W + 1, 4U + i});
+    for (int i = 0; i < 3; i++){
+        print_string((char*[]){"[ ] - draw \' \'", "[ ] - erase", "[ ] - select"}[i], (point){WA_W + 1, 4U + i});
         print_string (work_modes[i] ? "^" : " ", (point){WA_W + 2, 4U + i});
     }
 
@@ -133,10 +141,11 @@ void Display_screen (){
 }
 
 /* Update_screen(const char*, int, struct layer*[]) - updates sidebar and working area, draws 'path' */
-void Update_screen (const char* path, int layers_num, struct layer* layers[]){
-    Draw_working_area(layers_num, layers);
+void Update_screen (const char* path, int layers_num, struct layer* layers[], struct layer* select_layer){
+    Draw_working_area(layers_num, layers, select_layer);
     Update_side_bar(path);
 
     /* cursor drawing */
-    screen[cursor.y+1][cursor.x+1] = 219;
+    if (!work_modes[M_SELECTED])
+        screen[cursor.y+1][cursor.x+1] = 219;
 }

@@ -26,7 +26,7 @@ typedef struct {
 enum modes {
     M_DRAW,
     M_ERASE,
-    M_SYMMETRY
+    M_SELECTED
 };
 
 extern unsigned char **screen;
@@ -38,5 +38,6 @@ extern point cursor;
 extern unsigned char format;
 extern bool saved;
 extern unsigned long long saved_hash_summ;
+extern bool area_moving;
 
 #endif
